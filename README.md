@@ -2,6 +2,8 @@
 
 Ein benutzerfreundlicher Podcast-Downloader mit integrierter Audio-Transkription, der es ermöglicht, Podcast-Folgen aus RSS-Feeds herunterzuladen und automatisch zu transkribieren.
 
+**🚀 Neue Google Colab Version verfügbar!** - Nutzen Sie die Google Hardware für deutlich schnellere Transkription.
+
 ## 🎯 Features
 
 ### 📥 Podcast Downloader
@@ -22,8 +24,30 @@ Ein benutzerfreundlicher Podcast-Downloader mit integrierter Audio-Transkription
 - **📁 Datei-Upload**: Unterstützt auch externe Audio-Dateien
 - **📝 Export-Funktion**: Speichern als Textdatei
 
+## 🚀 Verfügbare Versionen
+
+### 🖥️ **Lokale Streamlit-App** (`app.py`)
+- Vollständige Desktop-Anwendung
+- Benötigt lokale Python-Installation
+- Ideal für regelmäßige Nutzung
+
+### ☁️ **Google Colab Notebook** (`podcast_parser_transkriptor.ipynb`) ⭐ **Empfohlen**
+- **GPU-Beschleunigung**: Nutzt Google's T4/TPU Hardware
+- **Keine lokale Installation**: Läuft komplett in der Cloud
+- **Schnellere Transkription**: 3-5x schneller als lokale CPU
+- **Interaktive Widgets**: Benutzerfreundliche Oberfläche
+- **Batch-Verarbeitung**: Automatische Transkription mehrerer Dateien
+- **ZIP-Export**: Einfacher Download aller Transkriptionen
+
+> **💡 Google Hardware Vorteile:**
+> - **T4 GPU**: 3-5x schnellere Whisper-Verarbeitung
+> - **TPU**: Noch schnellere Verarbeitung für große Modelle
+> - **Hohe RAM-Verfügbarkeit**: Bis zu 25GB RAM für große Modelle
+> - **Stabile Internetverbindung**: Optimiert für Downloads
+
 ## 📋 Voraussetzungen
 
+### Für lokale Installation:
 - Python 3.8 oder höher
 - Mindestens 4GB RAM (für base Modell)
 - Für größere Whisper-Modelle wird mehr RAM benötigt:
@@ -34,7 +58,40 @@ Ein benutzerfreundlicher Podcast-Downloader mit integrierter Audio-Transkription
   - **Large**: 10GB RAM
 - Internetverbindung für RSS-Feed-Zugriff und Downloads
 
-## 🚀 Installation
+### Für Google Colab:
+- Google-Konto (kostenlos)
+- Internetverbindung
+- **Keine lokale Installation erforderlich!**
+
+## 🚀 Installation & Verwendung
+
+### ☁️ **Google Colab Version (Empfohlen)**
+
+1. **Notebook öffnen**
+   - Öffnen Sie [Google Colab](https://colab.research.google.com/)
+   - Laden Sie `podcast_parser_transkriptor.ipynb` hoch oder kopieren Sie den Inhalt
+
+2. **GPU aktivieren**
+   - Gehen Sie zu `Runtime` → `Change runtime type`
+   - Wählen Sie `GPU` als Hardware accelerator
+
+3. **Zellen ausführen**
+   - Führen Sie alle Zellen der Reihe nach aus
+   - Folgen Sie den interaktiven Anweisungen
+
+4. **Podcasts herunterladen & transkribieren**
+   - Geben Sie RSS-Feed-URL ein
+   - Wählen Sie Folgen aus und laden Sie herunter
+   - Laden Sie Whisper-Modell und transkribieren Sie
+
+**Vorteile der Colab-Version:**
+- ⚡ **3-5x schneller** durch GPU-Beschleunigung
+- 🆓 **Kostenlos** (mit Google-Konto)
+- 🔧 **Keine Installation** erforderlich
+- 📱 **Überall verfügbar** (Browser-basiert)
+- 💾 **Hohe RAM-Verfügbarkeit** für große Modelle
+
+### 🖥️ **Lokale Streamlit-App**
 
 1. **Repository klonen oder herunterladen**
    ```bash
@@ -47,16 +104,16 @@ Ein benutzerfreundlicher Podcast-Downloader mit integrierter Audio-Transkription
    pip install -r requirements.txt
    ```
 
-## 💻 Verwendung
-
-1. **Anwendung starten**
+3. **Anwendung starten**
    ```bash
    streamlit run app.py
    ```
 
-2. **Im Browser öffnen**
+4. **Im Browser öffnen**
    - Die Anwendung öffnet sich automatisch in Ihrem Standard-Browser
    - Standard-URL: `http://localhost:8501`
+
+## 💻 Verwendung
 
 ### 📥 Podcast Downloader verwenden
 
@@ -85,6 +142,11 @@ Ein benutzerfreundlicher Podcast-Downloader mit integrierter Audio-Transkription
    - "Transkribieren" klicken
    - Ergebnis anzeigen und als Text speichern
 
+### 🔄 **Batch-Transkription (nur Colab)**
+- Automatische Transkription aller Audio-Dateien in einem Ordner
+- ZIP-Export aller Transkriptionen
+- Intelligente Überspringung bereits transkribierter Dateien
+
 ## 🔧 Konfiguration
 
 ### RSS-Feed-URL
@@ -94,7 +156,7 @@ Geben Sie die URL des RSS-Feeds ein. Beispiele:
 
 ### Zielordner
 - Wird automatisch erstellt, falls nicht vorhanden
-- Standard: `Energiezone_Podcast`
+- Standard: `Energiezone_Podcast` (lokal) / `./podcasts` (Colab)
 - Verwenden Sie relative oder absolute Pfade
 
 ### Whisper-Modelle
@@ -107,13 +169,21 @@ Geben Sie die URL des RSS-Feeds ein. Beispiele:
 | medium | 769 MB  | 5GB  | Langsam         | Sehr gut    | Hohe Qualität |
 | large  | 1550 MB | 10GB | Sehr langsam    | Beste       | Beste Qualität |
 
+> **⚡ Performance-Vergleich (Google Colab vs. Lokal):**
+> - **Tiny Modell**: 2-3x schneller
+> - **Base Modell**: 3-4x schneller  
+> - **Small Modell**: 3-5x schneller
+> - **Medium Modell**: 4-6x schneller
+> - **Large Modell**: 5-8x schneller
+
 ## 📁 Projektstruktur
 
 ```
 podcast-parser/
-├── app.py              # Hauptanwendung (Streamlit-App)
-├── requirements.txt    # Python-Abhängigkeiten
-└── README.md          # Diese Dokumentation
+├── app.py                                    # Lokale Streamlit-App
+├── podcast_parser_transkriptor.ipynb         # Google Colab Notebook ⭐
+├── requirements.txt                          # Python-Abhängigkeiten
+└── README.md                                # Diese Dokumentation
 ```
 
 ## 📦 Abhängigkeiten
@@ -122,6 +192,7 @@ podcast-parser/
 - **feedparser**: RSS/Atom-Feed-Parsing
 - **requests**: HTTP-Requests für Downloads
 - **openai-whisper**: Audio-Transkription mit Whisper-Modellen
+- **ipywidgets**: Interaktive Widgets für Colab (automatisch installiert)
 
 ## 🛠️ Technische Details
 
@@ -143,6 +214,13 @@ podcast-parser/
 - Segment-basierte Transkription
 - Temporäre Datei-Verwaltung für Uploads
 
+### Google Colab Optimierungen
+- **GPU-Beschleunigung**: Automatische Nutzung von T4/TPU
+- **Hohe RAM-Verfügbarkeit**: Bis zu 25GB für große Modelle
+- **Interaktive Widgets**: Benutzerfreundliche Oberfläche
+- **Batch-Verarbeitung**: Effiziente Massentranskription
+- **ZIP-Export**: Einfacher Download aller Ergebnisse
+
 ## 💡 Tipps für bessere Transkription
 
 1. **Audioqualität**: Verwenden Sie möglichst hochwertige Audio-Dateien
@@ -152,6 +230,7 @@ podcast-parser/
    - Für hohe Genauigkeit: medium oder large
 4. **Sprache**: Wählen Sie die korrekte Sprache für bessere Ergebnisse
 5. **RAM**: Stellen Sie sicher, dass genügend RAM verfügbar ist
+6. **Google Colab**: Nutzen Sie GPU-Beschleunigung für beste Performance
 
 ## 🐛 Bekannte Probleme & Fehlerbehebung
 
@@ -171,9 +250,15 @@ podcast-parser/
   - Versuchen Sie eine andere Audio-Datei
 
 - **Langsame Performance**:
-  - Verwenden Sie ein kleineres Whisper-Modell
+  - **Lokal**: Verwenden Sie ein kleineres Whisper-Modell
+  - **Colab**: Aktivieren Sie GPU-Beschleunigung
   - Schließen Sie andere Programme
   - Stellen Sie sicher, dass genügend RAM verfügbar ist
+
+### Google Colab spezifisch
+- **GPU nicht verfügbar**: Warten Sie oder verwenden Sie CPU
+- **RAM-Limit erreicht**: Verwenden Sie ein kleineres Modell
+- **Session-Timeout**: Speichern Sie Ergebnisse regelmäßig
 
 ## 🤝 Beitragen
 
@@ -190,7 +275,10 @@ Dieses Projekt steht unter der MIT-Lizenz.
 - [Requests](https://requests.readthedocs.io/) für HTTP-Funktionalität
 - [OpenAI Whisper](https://github.com/openai/whisper) für Audio-Transkription
 - [LocalTranscript](https://github.com/chradden/LocalTranscript) für Inspiration
+- [Google Colab](https://colab.research.google.com/) für GPU-Beschleunigung
 
 ---
 
-**Hinweis**: Stellen Sie sicher, dass Sie die Rechte haben, Podcast-Inhalte herunterzuladen und zu transkribieren. Respektieren Sie die Urheberrechte der Podcast-Ersteller. 
+**Hinweis**: Stellen Sie sicher, dass Sie die Rechte haben, Podcast-Inhalte herunterzuladen und zu transkribieren. Respektieren Sie die Urheberrechte der Podcast-Ersteller.
+
+**💡 Empfehlung**: Für beste Performance und Benutzerfreundlichkeit verwenden Sie die **Google Colab Version** mit GPU-Beschleunigung! 

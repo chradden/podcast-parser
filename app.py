@@ -233,25 +233,28 @@ elif page == "📝 Audio Transkriptor":
                     st.text_area("Transkription:", transcription_text, height=300)
                     
                     # Download button
-                    filename = os.path.splitext(os.path.basename(audio_file_path))[0]
+                    original_filename = os.path.splitext(os.path.basename(audio_file_path))[0]
                     st.download_button(
                         label="💾 Als Textdatei speichern",
                         data=transcription_text,
-                        file_name=f"{filename}_transkription.txt",
+                        file_name=f"{original_filename}.txt",
                         mime="text/plain"
                     )
                     
-                    # Show additional info
-                    if "segments" in result:
-                        st.subheader("📊 Transkriptions-Details")
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Segmente", len(result["segments"]))
-                        with col2:
-                            duration = result["segments"][-1]["end"] if result["segments"] else 0
-                            st.metric("Dauer", f"{duration:.1f}s")
-                        with col3:
-                            st.metric("Sprache", result.get("language", "Unbekannt"))
+                                # Show additional info
+            if "segments" in result:
+                st.subheader("📊 Transkriptions-Details")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Segmente", len(result["segments"]))
+                with col2:
+                    duration = result["segments"][-1]["end"] if result["segments"] else 0
+                    st.metric("Dauer", f"{duration:.1f}s")
+                with col3:
+                    st.metric("Sprache", result.get("language", "Unbekannt"))
+                
+                # Zeige Dateiname-Info
+                st.info(f"💾 Transkription wird als: **{original_filename}.txt** gespeichert")
                     
                     # Clean up temp file if it was uploaded
                     if uploaded_file is not None and os.path.exists(audio_file_path):
