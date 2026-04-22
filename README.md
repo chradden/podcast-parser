@@ -1,284 +1,125 @@
-# Podcast Parser & Transkriptor - RSS Feed Downloader & Audio Transkription
+# Podcast Parser & Transkriptor
 
-Ein benutzerfreundlicher Podcast-Downloader mit integrierter Audio-Transkription, der es ermöglicht, Podcast-Folgen aus RSS-Feeds herunterzuladen und automatisch zu transkribieren.
+CLI-Tool zum Herunterladen und Transkribieren von Podcast-Folgen aus RSS-Feeds.
+Speziell dafür gebaut, **aus einer Claude-Code-Session** angesteuert zu werden:
+strukturierte Ein-/Ausgaben, Transkripte als `.txt` auf der Platte, Claude
+erledigt Zusammenfassungen direkt im Chat.
 
-**🚀 Neue Google Colab Version verfügbar!** - Nutzen Sie die Google Hardware für deutlich schnellere Transkription.
-
-## 🎯 Features
-
-### 📥 Podcast Downloader
-- **Einfache Bedienung**: Web-basierte Benutzeroberfläche mit Streamlit
-- **RSS-Feed-Parsing**: Automatische Erkennung und Analyse von Podcast-Feeds
-- **Selektiver Download**: Einzelne oder alle Folgen auswählen
-- **Dateigrößen-Anzeige**: Zeigt die Größe jeder Folge vor dem Download an
-- **Intelligente Dateinamen**: Automatische Bereinigung von ungültigen Zeichen
-- **Fortschrittsanzeige**: Echtzeit-Feedback während des Downloads
-- **Duplikat-Erkennung**: Überspringt bereits vorhandene Dateien
-
-### 📝 Audio Transkriptor
-- **🎵 Multi-Format Support**: MP3, WAV, M4A, FLAC, OGG
-- **🌍 Mehrsprachige Transkription**: Deutsch, Englisch, automatische Erkennung
-- **🤖 OpenAI Whisper Integration**: Lokale Verarbeitung mit verschiedenen Modell-Größen
-- **📊 Intelligente Modell-Auswahl**: Von tiny (schnell) bis large (genau)
-- **💾 Direkte Integration**: Transkribiert heruntergeladene Podcast-Folgen
-- **📁 Datei-Upload**: Unterstützt auch externe Audio-Dateien
-- **📝 Export-Funktion**: Speichern als Textdatei
-
-## 🚀 Verfügbare Versionen
-
-### 🖥️ **Lokale Streamlit-App** (`app.py`)
-- Vollständige Desktop-Anwendung
-- Benötigt lokale Python-Installation
-- Ideal für regelmäßige Nutzung
-
-### ☁️ **Google Colab Notebook** (`podcast_parser_transkriptor.ipynb`) ⭐ **Empfohlen**
-- **GPU-Beschleunigung**: Nutzt Google's T4/TPU Hardware
-- **Keine lokale Installation**: Läuft komplett in der Cloud
-- **Schnellere Transkription**: 3-5x schneller als lokale CPU
-- **Interaktive Widgets**: Benutzerfreundliche Oberfläche
-- **Batch-Verarbeitung**: Automatische Transkription mehrerer Dateien
-- **ZIP-Export**: Einfacher Download aller Transkriptionen
-
-> **💡 Google Hardware Vorteile:**
-> - **T4 GPU**: 3-5x schnellere Whisper-Verarbeitung
-> - **TPU**: Noch schnellere Verarbeitung für große Modelle
-> - **Hohe RAM-Verfügbarkeit**: Bis zu 25GB RAM für große Modelle
-> - **Stabile Internetverbindung**: Optimiert für Downloads
-
-## 📋 Voraussetzungen
-
-### Für lokale Installation:
-- Python 3.8 oder höher
-- Mindestens 4GB RAM (für base Modell)
-- Für größere Whisper-Modelle wird mehr RAM benötigt:
-  - **Tiny**: 1GB RAM
-  - **Base**: 1GB RAM  
-  - **Small**: 2GB RAM
-  - **Medium**: 5GB RAM
-  - **Large**: 10GB RAM
-- Internetverbindung für RSS-Feed-Zugriff und Downloads
-
-### Für Google Colab:
-- Google-Konto (kostenlos)
-- Internetverbindung
-- **Keine lokale Installation erforderlich!**
-
-## 🚀 Installation & Verwendung
-
-### ☁️ **Google Colab Version (Empfohlen)**
-
-1. **Notebook öffnen**
-   - Öffnen Sie [Google Colab](https://colab.research.google.com/)
-   - Laden Sie `podcast_parser_transkriptor.ipynb` hoch oder kopieren Sie den Inhalt
-
-2. **GPU aktivieren**
-   - Gehen Sie zu `Runtime` → `Change runtime type`
-   - Wählen Sie `GPU` als Hardware accelerator
-
-3. **Zellen ausführen**
-   - Führen Sie alle Zellen der Reihe nach aus
-   - Folgen Sie den interaktiven Anweisungen
-
-4. **Podcasts herunterladen & transkribieren**
-   - Geben Sie RSS-Feed-URL ein
-   - Wählen Sie Folgen aus und laden Sie herunter
-   - Laden Sie Whisper-Modell und transkribieren Sie
-
-**Vorteile der Colab-Version:**
-- ⚡ **3-5x schneller** durch GPU-Beschleunigung
-- 🆓 **Kostenlos** (mit Google-Konto)
-- 🔧 **Keine Installation** erforderlich
-- 📱 **Überall verfügbar** (Browser-basiert)
-- 💾 **Hohe RAM-Verfügbarkeit** für große Modelle
-
-### 🖥️ **Lokale Streamlit-App**
-
-1. **Repository klonen oder herunterladen**
-   ```bash
-   git clone <repository-url>
-   cd podcast-parser
-   ```
-
-2. **Abhängigkeiten installieren**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Anwendung starten**
-   ```bash
-   streamlit run app.py
-   ```
-
-4. **Im Browser öffnen**
-   - Die Anwendung öffnet sich automatisch in Ihrem Standard-Browser
-   - Standard-URL: `http://localhost:8501`
-
-## 💻 Verwendung
-
-### 📥 Podcast Downloader verwenden
-
-1. **RSS-Feed eingeben**
-   - RSS-Feed-URL eingeben (Standard: Energiezone Podcast)
-   - Zielordner angeben (wird automatisch erstellt)
-
-2. **Folgen herunterladen**
-   - "Feed laden & Folgen anzeigen" klicken
-   - Gewünschte Folgen auswählen
-   - "Ausgewählte Folgen herunterladen" starten
-
-### 📝 Audio Transkriptor verwenden
-
-1. **Whisper-Modell laden**
-   - Modell-Größe auswählen (tiny = schnell, large = genau)
-   - "Modell laden" klicken
-   - Warten bis das Modell geladen ist
-
-2. **Audio-Datei auswählen**
-   - **Option A**: Datei hochladen
-   - **Option B**: Heruntergeladene Podcast-Folge auswählen
-
-3. **Transkribieren**
-   - Sprache auswählen (Deutsch, Englisch, Auto)
-   - "Transkribieren" klicken
-   - Ergebnis anzeigen und als Text speichern
-
-### 🔄 **Batch-Transkription (nur Colab)**
-- Automatische Transkription aller Audio-Dateien in einem Ordner
-- ZIP-Export aller Transkriptionen
-- Intelligente Überspringung bereits transkribierter Dateien
-
-## 🔧 Konfiguration
-
-### RSS-Feed-URL
-Geben Sie die URL des RSS-Feeds ein. Beispiele:
-- `https://www.energiezone.org/feed/mp3`
-- `https://feeds.simplecast.com/your-podcast-feed`
-
-### Zielordner
-- Wird automatisch erstellt, falls nicht vorhanden
-- Standard: `Energiezone_Podcast` (lokal) / `./podcasts` (Colab)
-- Verwenden Sie relative oder absolute Pfade
-
-### Whisper-Modelle
-
-| Modell | Größe   | RAM  | Geschwindigkeit | Genauigkeit | Empfehlung |
-| ------ | ------- | ---- | --------------- | ----------- | ---------- |
-| tiny   | 39 MB   | 1GB  | Sehr schnell    | Gut         | Schnelle Tests |
-| base   | 74 MB   | 1GB  | Schnell         | Besser      | Standard |
-| small  | 244 MB  | 2GB  | Mittel          | Noch besser | Gute Balance |
-| medium | 769 MB  | 5GB  | Langsam         | Sehr gut    | Hohe Qualität |
-| large  | 1550 MB | 10GB | Sehr langsam    | Beste       | Beste Qualität |
-
-> **⚡ Performance-Vergleich (Google Colab vs. Lokal):**
-> - **Tiny Modell**: 2-3x schneller
-> - **Base Modell**: 3-4x schneller  
-> - **Small Modell**: 3-5x schneller
-> - **Medium Modell**: 4-6x schneller
-> - **Large Modell**: 5-8x schneller
-
-## 📁 Projektstruktur
+## Architektur
 
 ```
-podcast-parser/
-├── app.py                                    # Lokale Streamlit-App
-├── podcast_parser_transkriptor.ipynb         # Google Colab Notebook ⭐
-├── requirements.txt                          # Python-Abhängigkeiten
-└── README.md                                # Diese Dokumentation
+feeds.py        # RSS-Feed parsen, Episoden-Liste + Selektoren
+download.py     # chunked Download mit safen Dateinamen
+transcribe.py   # Whisper-Wrapper, Backends: local (faster-whisper) | groq
+podcast.py      # CLI (list / download / transcribe / pipeline)
 ```
 
-## 📦 Abhängigkeiten
+Zusätzlich im Repo: `podcast_parser_transkriptor.ipynb` – die alte Colab-/GPU-Variante,
+bleibt als Option für Batch-Jobs mit Google-Hardware.
 
-- **streamlit**: Web-Framework für die Benutzeroberfläche
-- **feedparser**: RSS/Atom-Feed-Parsing
-- **requests**: HTTP-Requests für Downloads
-- **openai-whisper**: Audio-Transkription mit Whisper-Modellen
-- **ipywidgets**: Interaktive Widgets für Colab (automatisch installiert)
+## Installation
 
-## 🛠️ Technische Details
+```bash
+pip install -r requirements.txt
+# für den lokalen Backend wird zusätzlich ffmpeg im System benötigt:
+#   macOS:   brew install ffmpeg
+#   Ubuntu:  sudo apt install ffmpeg
+```
 
-### Dateinamen-Generierung
-- Automatische Bereinigung ungültiger Zeichen
-- Maximale Länge: 120 Zeichen
-- Leerzeichen werden durch Unterstriche ersetzt
+Optional für das Groq-Backend:
 
-### Download-Features
-- Chunk-basierte Downloads für große Dateien
-- Timeout-Schutz (30 Sekunden)
-- Automatische Weiterleitung bei HTTP-Redirects
-- Fehlerbehandlung mit detaillierten Meldungen
+```bash
+export GROQ_API_KEY=...
+```
 
-### Transkriptions-Features
-- Lokale Whisper-Modell-Verarbeitung
-- Unterstützung für verschiedene Audio-Formate
-- Automatische Spracherkennung
-- Segment-basierte Transkription
-- Temporäre Datei-Verwaltung für Uploads
+## CLI-Nutzung
 
-### Google Colab Optimierungen
-- **GPU-Beschleunigung**: Automatische Nutzung von T4/TPU
-- **Hohe RAM-Verfügbarkeit**: Bis zu 25GB für große Modelle
-- **Interaktive Widgets**: Benutzerfreundliche Oberfläche
-- **Batch-Verarbeitung**: Effiziente Massentranskription
-- **ZIP-Export**: Einfacher Download aller Ergebnisse
+### Episoden auflisten
 
-## 💡 Tipps für bessere Transkription
+```bash
+python podcast.py list https://www.energiezone.org/feed/mp3
+python podcast.py list <feed> --json          # maschinenlesbar
+python podcast.py list <feed> --no-sizes      # schneller, ohne HEAD-Requests
+```
 
-1. **Audioqualität**: Verwenden Sie möglichst hochwertige Audio-Dateien
-2. **Hintergrundgeräusche**: Reduzieren Sie Hintergrundgeräusche
-3. **Modellauswahl**: 
-   - Für schnelle Transkription: tiny oder base
-   - Für hohe Genauigkeit: medium oder large
-4. **Sprache**: Wählen Sie die korrekte Sprache für bessere Ergebnisse
-5. **RAM**: Stellen Sie sicher, dass genügend RAM verfügbar ist
-6. **Google Colab**: Nutzen Sie GPU-Beschleunigung für beste Performance
+### Episoden herunterladen
 
-## 🐛 Bekannte Probleme & Fehlerbehebung
+```bash
+python podcast.py download <feed> --episode latest        # neueste Folge
+python podcast.py download <feed> --episode latest:5      # 5 neueste
+python podcast.py download <feed> --episode 3             # Index 3
+python podcast.py download <feed> --episode 2-7           # Bereich
+python podcast.py download <feed> --episode 1,4,9         # Liste
+python podcast.py download <feed> --episode all --out ./podcasts
+```
 
-### Download-Probleme
-- Sehr große Dateien können längere Download-Zeiten benötigen
-- Einige RSS-Feeds haben möglicherweise unterschiedliche Strukturen
+Selektoren funktionieren in `download` und `pipeline` identisch.
 
-### Transkriptions-Probleme
-- **Modell kann nicht geladen werden**:
-  - Überprüfen Sie Ihre Internetverbindung (erster Download)
-  - Stellen Sie sicher, dass genügend RAM verfügbar ist
-  - Versuchen Sie ein kleineres Modell
+### Audio transkribieren
 
-- **Audio-Datei kann nicht verarbeitet werden**:
-  - Überprüfen Sie, ob die Datei beschädigt ist
-  - Stellen Sie sicher, dass das Format unterstützt wird
-  - Versuchen Sie eine andere Audio-Datei
+```bash
+# Lokal via faster-whisper (Default-Modell: base)
+python podcast.py transcribe ./podcasts/folge.mp3 --lang de
 
-- **Langsame Performance**:
-  - **Lokal**: Verwenden Sie ein kleineres Whisper-Modell
-  - **Colab**: Aktivieren Sie GPU-Beschleunigung
-  - Schließen Sie andere Programme
-  - Stellen Sie sicher, dass genügend RAM verfügbar ist
+# Anderes Modell
+python podcast.py transcribe folge.mp3 --model small --lang de
 
-### Google Colab spezifisch
-- **GPU nicht verfügbar**: Warten Sie oder verwenden Sie CPU
-- **RAM-Limit erreicht**: Verwenden Sie ein kleineres Modell
-- **Session-Timeout**: Speichern Sie Ergebnisse regelmäßig
+# Via Groq (schnell, braucht GROQ_API_KEY)
+python podcast.py transcribe folge.mp3 --engine groq --lang de
+```
 
-## 🤝 Beitragen
+Nebenprodukt: `folge.txt` (reiner Transkripttext) und `folge.json`
+(Segmente mit Timestamps) landen neben der Audio-Datei.
 
-Verbesserungsvorschläge und Bug-Reports sind willkommen! 
+### Alles-in-einem: Pipeline
 
-## 📄 Lizenz
+```bash
+# Letzte 3 Folgen herunterladen und direkt transkribieren
+python podcast.py pipeline <feed> --episode latest:3 --engine groq --lang de
+```
 
-Dieses Projekt steht unter der MIT-Lizenz.
+## Nutzung aus Claude Code
 
-## 🙏 Danksagungen
+Der eigentliche Workflow sieht so aus:
 
-- [Streamlit](https://streamlit.io/) für das Web-Framework
-- [feedparser](https://feedparser.readthedocs.io/) für RSS-Parsing
-- [Requests](https://requests.readthedocs.io/) für HTTP-Funktionalität
-- [OpenAI Whisper](https://github.com/openai/whisper) für Audio-Transkription
-- [LocalTranscript](https://github.com/chradden/LocalTranscript) für Inspiration
-- [Google Colab](https://colab.research.google.com/) für GPU-Beschleunigung
+1. Du sagst: _„Fasse mir die neueste Folge von https://…/feed.xml zusammen."_
+2. Claude ruft `python podcast.py pipeline <feed> --episode latest --engine groq --lang de`.
+3. Das Transkript landet als `.txt` im `./podcasts`-Ordner.
+4. Claude liest die Datei und fasst sie dir direkt im Chat zusammen – in Länge,
+   Sprache und Stil deiner Wahl, mit Rückfragen.
 
----
+Für mehrere Folgen („alle Folgen von Podcast X") läuft die Pipeline über den
+entsprechenden Selektor (`--episode all` bzw. `latest:N`), und Claude liest am
+Ende alle `.txt`-Dateien nacheinander.
 
-**Hinweis**: Stellen Sie sicher, dass Sie die Rechte haben, Podcast-Inhalte herunterzuladen und zu transkribieren. Respektieren Sie die Urheberrechte der Podcast-Ersteller.
+## Backend-Wahl
 
-**💡 Empfehlung**: Für beste Performance und Benutzerfreundlichkeit verwenden Sie die **Google Colab Version** mit GPU-Beschleunigung! 
+| Backend | Geschwindigkeit | Kosten | Benötigt | Wofür |
+|---|---|---|---|---|
+| `local` (faster-whisper) | CPU: ~Echtzeit mit `base` | 0 | ffmpeg | einzelne Folgen, offline |
+| `groq` (Whisper-large-v3) | ~10–30s pro Stunde Audio | Free-Tier, sonst pay | `GROQ_API_KEY` | Bulk-Transkription |
+
+Daumenregel: Eine Folge zwischendurch → `local`. Ganze Podcasts → `groq`.
+
+## Whisper-Modelle (local)
+
+| Modell | Größe | RAM | Relative Geschwindigkeit | Genauigkeit |
+|---|---|---|---|---|
+| `tiny`     |   39 MB |  1 GB | sehr schnell | okay |
+| `base`     |   74 MB |  1 GB | schnell      | gut |
+| `small`    |  244 MB |  2 GB | mittel       | besser |
+| `medium`   |  769 MB |  5 GB | langsam      | sehr gut |
+| `large-v3` | 1550 MB | 10 GB | sehr langsam | beste |
+
+`faster-whisper` ist durch CT2-Quantisierung (`int8`) im Vergleich zu
+`openai-whisper` ca. 3–5× schneller bei gleicher Qualität.
+
+## Alter Streamlit-UI
+
+Die frühere `app.py` (Streamlit-basiert) wurde zugunsten des CLI entfernt –
+in einer Claude-Code-Session bringt eine UI nichts. Wer sie weiterhin haben
+möchte, findet sie in der Git-Historie.
+
+## Lizenz
+
+MIT.
