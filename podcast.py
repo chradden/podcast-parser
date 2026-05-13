@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Podcast CLI: list / download / transcribe / pipeline.
+"""Podcast/Video CLI: list / download / transcribe / pipeline / video.
 
 Designed to be driven from Claude Code (or any shell): structured output,
 file artifacts next to audio files, no UI.
@@ -7,8 +7,9 @@ file artifacts next to audio files, no UI.
 Examples:
   python podcast.py list https://feeds.example.com/feed.xml
   python podcast.py download <feed> --episode latest:3 --out ./podcasts
-  python podcast.py transcribe ./podcasts/foo.mp3 --engine groq --lang de
-  python podcast.py pipeline <feed> --episode latest --engine groq --lang de
+  python podcast.py transcribe ./podcasts/foo.mp3 --lang de
+  python podcast.py pipeline <feed> --episode latest --lang de
+  python podcast.py video https://kurs.example.com/lesson/42 --lang de
 """
 
 from __future__ import annotations
@@ -125,6 +126,58 @@ def cmd_pipeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_video(args: argparse.Namespace) -> int:
+    from video import fetch_audio, DRMDetectedError, FetchError
+    from transcribe import transcribe as run_transcribe, write_outputs
+
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        audio = fetch_audio(
+            args.url,
+            out_dir,
+            method=args.method,
+            cookies_from_browser=args.cookies_from_browser,
+            chrome_profile=args.chrome_profile,
+        )
+    except DRMDetectedError as e:
+        print(f"DRM detected: {e}", file=sys.stderr)
+        return 3
+    except FetchError as e:
+        print(f"Fetch failed: {e}", file=sys.stderr)
+        return 2
+
+    print(f"→ audio: {audio}", file=sys.stderr)
+    result = run_transcribe(
+        audio,
+        engine=args.engine,
+        model=args.model,
+        language=None if args.lang == "auto" else args.lang,
+    )
+    txt_path, json_path = write_outputs(result, audio)
+
+    if args.json:
+        json.dump(
+            {
+                "source_url": args.url,
+                "audio": str(audio),
+                "text_path": str(txt_path),
+                "json_path": str(json_path),
+                **result.to_dict(),
+            },
+            sys.stdout,
+            ensure_ascii=False,
+            indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        print(f"Transcript: {txt_path}")
+        print(f"Segments:   {json_path}")
+        print(f"Language:   {result.language}   Duration: {result.duration}s   Engine: {result.engine}/{result.model}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="podcast", description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -146,7 +199,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_tr = sub.add_parser("transcribe", help="Transcribe a local audio file")
     p_tr.add_argument("audio_file")
-    p_tr.add_argument("--engine", choices=["local", "groq"], default="local")
+    p_tr.add_argument("--engine", choices=["local", "groq"], default="groq")
     p_tr.add_argument("--model", default=None,
                       help="local: tiny|base|small|medium|large-v3 (default base). groq: whisper-large-v3")
     p_tr.add_argument("--lang", default="auto", help="Language code (e.g. de, en) or 'auto'")
@@ -158,12 +211,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_pipe.add_argument("--episode", required=True,
                         help="Selector (see 'download --episode')")
     p_pipe.add_argument("--out", default="./podcasts")
-    p_pipe.add_argument("--engine", choices=["local", "groq"], default="local")
+    p_pipe.add_argument("--engine", choices=["local", "groq"], default="groq")
     p_pipe.add_argument("--model", default=None)
     p_pipe.add_argument("--lang", default="auto")
     p_pipe.add_argument("--quiet", action="store_true")
     p_pipe.add_argument("--json", action="store_true")
     p_pipe.set_defaults(func=cmd_pipeline)
+
+    p_vid = sub.add_parser("video", help="Fetch audio from a video URL (using your Chrome session) and transcribe it")
+    p_vid.add_argument("url")
+    p_vid.add_argument("--method", choices=["auto", "yt-dlp", "playwright"], default="auto",
+                       help="auto = try yt-dlp, fall back to Playwright (default)")
+    p_vid.add_argument("--cookies-from-browser", default="chrome",
+                       help="Browser to read cookies from for yt-dlp (default: chrome)")
+    p_vid.add_argument("--chrome-profile", default=None,
+                       help="Path to Chrome user-data-dir for Playwright (defaults to your OS-standard path)")
+    p_vid.add_argument("--out", default="./videos")
+    p_vid.add_argument("--engine", choices=["local", "groq"], default="groq")
+    p_vid.add_argument("--model", default=None)
+    p_vid.add_argument("--lang", default="auto")
+    p_vid.add_argument("--json", action="store_true")
+    p_vid.set_defaults(func=cmd_video)
 
     return p
 

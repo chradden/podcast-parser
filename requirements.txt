@@ -1,3 +1,5 @@
 feedparser
 requests
 faster-whisper
+yt-dlp
+playwright

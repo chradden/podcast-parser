@@ -1,17 +1,18 @@
-# Podcast Parser & Transkriptor
+# Podcast & Video Parser/Transkriptor
 
-CLI-Tool zum Herunterladen und Transkribieren von Podcast-Folgen aus RSS-Feeds.
-Speziell dafür gebaut, **aus einer Claude-Code-Session** angesteuert zu werden:
-strukturierte Ein-/Ausgaben, Transkripte als `.txt` auf der Platte, Claude
-erledigt Zusammenfassungen direkt im Chat.
+CLI-Tool zum Herunterladen und Transkribieren von Podcast-Folgen (RSS) und
+Online-Videokursen hinter einem Login. Speziell dafür gebaut, **aus einer
+Claude-Code-Session** angesteuert zu werden: strukturierte Ein-/Ausgaben,
+Transkripte als `.txt` auf der Platte, Claude fasst im Chat zusammen.
 
 ## Architektur
 
 ```
 feeds.py        # RSS-Feed parsen, Episoden-Liste + Selektoren
 download.py     # chunked Download mit safen Dateinamen
+video.py        # URL → Audio via yt-dlp (primär) oder Playwright (Fallback)
 transcribe.py   # Whisper-Wrapper, Backends: local (faster-whisper) | groq
-podcast.py      # CLI (list / download / transcribe / pipeline)
+podcast.py      # CLI (list / download / transcribe / pipeline / video)
 ```
 
 Zusätzlich im Repo: `podcast_parser_transkriptor.ipynb` – die alte Colab-/GPU-Variante,
@@ -21,16 +22,21 @@ bleibt als Option für Batch-Jobs mit Google-Hardware.
 
 ```bash
 pip install -r requirements.txt
-# für den lokalen Backend wird zusätzlich ffmpeg im System benötigt:
+# ffmpeg im System (für Audio-Decoding):
 #   macOS:   brew install ffmpeg
 #   Ubuntu:  sudo apt install ffmpeg
+
+# Nur für den Playwright-Fallback bei Videos:
+playwright install chromium
 ```
 
-Optional für das Groq-Backend:
+Groq-Backend ist Default; setze:
 
 ```bash
 export GROQ_API_KEY=...
 ```
+
+Wer offline arbeiten will: `--engine local` (nutzt faster-whisper, kein Key nötig).
 
 ## CLI-Nutzung
 
@@ -58,14 +64,11 @@ Selektoren funktionieren in `download` und `pipeline` identisch.
 ### Audio transkribieren
 
 ```bash
-# Lokal via faster-whisper (Default-Modell: base)
+# Default: Groq (schnell, braucht GROQ_API_KEY)
 python podcast.py transcribe ./podcasts/folge.mp3 --lang de
 
-# Anderes Modell
-python podcast.py transcribe folge.mp3 --model small --lang de
-
-# Via Groq (schnell, braucht GROQ_API_KEY)
-python podcast.py transcribe folge.mp3 --engine groq --lang de
+# Lokal via faster-whisper
+python podcast.py transcribe folge.mp3 --engine local --model base --lang de
 ```
 
 Nebenprodukt: `folge.txt` (reiner Transkripttext) und `folge.json`
@@ -75,8 +78,90 @@ Nebenprodukt: `folge.txt` (reiner Transkripttext) und `folge.json`
 
 ```bash
 # Letzte 3 Folgen herunterladen und direkt transkribieren
-python podcast.py pipeline <feed> --episode latest:3 --engine groq --lang de
+python podcast.py pipeline <feed> --episode latest:3 --lang de
 ```
+
+### Videokurse transkribieren (mit Login)
+
+```bash
+python podcast.py video https://kurs.example.com/lesson/42 --lang de
+```
+
+Wie das funktioniert:
+
+1. **yt-dlp liest deine Chrome-Cookies** (`--cookies-from-browser chrome`).
+   Du musst in Chrome bereits eingeloggt sein – yt-dlp übernimmt die Session.
+2. Wenn yt-dlp die Site nicht kennt, fällt die CLI **automatisch auf
+   Playwright** zurück: ein echter Chromium öffnet sich mit deinem
+   Chrome-Profil, navigiert zur URL, lauscht auf den Medien-Stream und reicht
+   ihn an ffmpeg.
+3. Das extrahierte Audio wandert direkt durch Whisper.
+
+Wichtige Flags:
+
+```bash
+--method auto|yt-dlp|playwright   # erzwingen, falls nötig
+--chrome-profile <path>           # eigener Chrome-Profilpfad
+--cookies-from-browser firefox    # Cookies aus Firefox statt Chrome
+--out ./videos                    # Zielordner
+```
+
+Default-Pfade für `--chrome-profile`:
+
+| OS | Pfad |
+|---|---|
+| macOS | `~/Library/Application Support/Google/Chrome` |
+| Linux | `~/.config/google-chrome` |
+| Windows | `~/AppData/Local/Google/Chrome/User Data` |
+
+Wenn der gleichzeitig laufende Chrome das Profil blockiert: einmal kurz
+schließen, oder ein zweites Profil anlegen.
+
+## DRM-geschützte Plattformen (MasterClass, LinkedIn Learning, Udemy …)
+
+**Diese Plattformen verschlüsseln den Stream mit Widevine**. Weder yt-dlp noch
+Playwright können das Audio rausziehen – der Stream wird erst im Browser-CDM
+entschlüsselt und ist außerhalb davon nicht greifbar. Das ist Designziel von
+DRM, nicht ein Bug, den wir umgehen.
+
+`python podcast.py video <drm-url>` bricht in dem Fall mit einer klaren
+DRM-Meldung ab.
+
+**Workaround: System-Audio aufnehmen, während du den Kurs anschaust.** Du
+spielst das Video normal in Chrome, capturest den Lautsprecher-Output in eine
+`.wav` und reichst sie an die CLI weiter:
+
+```bash
+python podcast.py transcribe ./aufnahme.wav --lang de
+```
+
+Audio-Routing pro OS:
+
+**macOS**
+1. [BlackHole 2ch](https://existential.audio/blackhole/) installieren.
+2. In *Audio-MIDI-Setup* ein „Multi-Output"-Gerät anlegen (BlackHole +
+   Kopfhörer/Lautsprecher), als System-Output wählen.
+3. In QuickTime *Neue Audioaufnahme* → BlackHole als Eingang → aufnehmen.
+4. Export als `.wav` oder `.m4a`, dann `python podcast.py transcribe …`
+
+**Linux (PulseAudio/PipeWire)**
+```bash
+# Sink-Monitor finden:
+pactl list short sources | grep monitor
+# Aufnehmen (eine MasterClass-Folge etwa 90 min lang):
+parec -d <sink>.monitor --file-format=wav aufnahme.wav
+```
+Im Parallel-Tab den Kurs in Chrome abspielen.
+
+**Windows**
+1. „Stereo Mix" in den Sound-Einstellungen aktivieren – oder
+   [VB-Audio Cable](https://vb-audio.com/Cable/) installieren.
+2. In Audacity das virtuelle Gerät als Eingang wählen → aufnehmen → als `.wav`
+   exportieren.
+
+Nachteile dieses Wegs: Aufnahme läuft in Echtzeit (60-Min-Kurs = 60 Min
+Wartezeit), und alle Systemklänge in der Zeit landen mit auf der Spur. Dafür
+ist die Qualität in der Regel sehr gut.
 
 ## Nutzung aus Claude Code
 
@@ -96,10 +181,10 @@ Ende alle `.txt`-Dateien nacheinander.
 
 | Backend | Geschwindigkeit | Kosten | Benötigt | Wofür |
 |---|---|---|---|---|
-| `local` (faster-whisper) | CPU: ~Echtzeit mit `base` | 0 | ffmpeg | einzelne Folgen, offline |
-| `groq` (Whisper-large-v3) | ~10–30s pro Stunde Audio | Free-Tier, sonst pay | `GROQ_API_KEY` | Bulk-Transkription |
+| `groq` (Default, Whisper-large-v3) | ~10–30s pro Stunde Audio | Free-Tier, sonst pay | `GROQ_API_KEY` | Standardfall, Bulk |
+| `local` (faster-whisper) | CPU: ~Echtzeit mit `base` | 0 | ffmpeg | offline, kein Key gewünscht |
 
-Daumenregel: Eine Folge zwischendurch → `local`. Ganze Podcasts → `groq`.
+Mit `--engine local` schaltest du explizit aufs lokale Backend.
 
 ## Whisper-Modelle (local)
 
