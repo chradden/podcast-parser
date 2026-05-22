@@ -1,4 +1,5 @@
-feedparser 
+feedparser
 requests
-streamlit 
-openai-whisper 
+faster-whisper
+yt-dlp
+playwright
