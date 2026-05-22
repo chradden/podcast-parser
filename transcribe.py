@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
@@ -96,9 +97,20 @@ GROQ_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions"
 GROQ_DEFAULT_MODEL = "whisper-large-v3"
 
 # Groq's hard upload limit for whisper-large-v3 is 25 MB on the free tier
-# (100 MB on dev). Stay safely under the free-tier ceiling.
-GROQ_MAX_UPLOAD_BYTES = 24 * 1024 * 1024
-GROQ_CHUNK_SECONDS = 600  # 10 min chunks when we must split
+# (100 MB on dev). Stay safely under the free-tier ceiling by default;
+# override via GROQ_MAX_UPLOAD_MB once you're on the dev tier.
+GROQ_MAX_UPLOAD_BYTES = int(float(os.environ.get("GROQ_MAX_UPLOAD_MB", "24")) * 1024 * 1024)
+GROQ_CHUNK_SECONDS = 600  # 10 min chunks when even Opus recompress isn't enough
+GROQ_RATE_LIMIT_MAX_WAIT = 120  # seconds; longer Retry-After → give up
+GROQ_RATE_LIMIT_RETRIES = 3
+# Opus at 24 kbps mono 16 kHz: ~11 MB per hour of speech. Whisper resamples to
+# 16 kHz internally so the bandwidth ceiling is fine. FLAC would be wrong here
+# because re-encoding an already-lossy MP3 source to lossless inflates size.
+_RECOMPRESS_ARGS = [
+    "-vn", "-ar", "16000", "-ac", "1", "-map", "0:a",
+    "-c:a", "libopus", "-b:a", "24k", "-application", "voip",
+]
+_RECOMPRESS_SUFFIX = ".ogg"
 
 
 def _ffmpeg_available() -> bool:
@@ -106,51 +118,46 @@ def _ffmpeg_available() -> bool:
 
 
 def _run_ffmpeg(cmd: list[str]) -> None:
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Capture as bytes and decode with replace — ffmpeg stderr can contain
+    # bytes that aren't valid in the active Windows code page (cp1252).
+    result = subprocess.run(cmd, capture_output=True)
     if result.returncode != 0:
-        tail = (result.stderr or "").strip().splitlines()[-3:]
+        stderr = result.stderr.decode("utf-8", errors="replace")
+        tail = stderr.strip().splitlines()[-3:]
         raise RuntimeError("ffmpeg failed: " + " | ".join(tail))
 
 
 def _ffprobe_duration(path: Path) -> float:
-    out = subprocess.check_output(
+    out = subprocess.run(
         [
             "ffprobe", "-v", "error",
             "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1",
             str(path),
         ],
-        text=True,
+        capture_output=True,
+        check=True,
     )
-    return float(out.strip())
+    return float(out.stdout.decode("utf-8", errors="replace").strip())
 
 
 def _recompress_for_groq(src: Path, dst: Path) -> None:
-    """Transcode to 16 kHz mono FLAC – Whisper resamples to 16 kHz internally,
-    so this is loss-free for the model and shrinks most podcasts 3–5×."""
-    _run_ffmpeg([
-        "ffmpeg", "-y", "-i", str(src),
-        "-ar", "16000", "-ac", "1", "-map", "0:a",
-        "-c:a", "flac",
-        str(dst),
-    ])
+    """Transcode to 16 kHz mono Opus 24 kbps – tiny and lossless-enough for Whisper."""
+    _run_ffmpeg(["ffmpeg", "-y", "-i", str(src), *_RECOMPRESS_ARGS, str(dst)])
 
 
 def _split_for_groq(src: Path, out_dir: Path, chunk_seconds: int) -> list[tuple[Path, float]]:
-    """Split src into <=chunk_seconds FLAC pieces. Returns [(path, start_offset), ...]."""
+    """Split src into <=chunk_seconds Opus pieces. Returns [(path, start_offset), ...]."""
     duration = _ffprobe_duration(src)
     n = max(1, math.ceil(duration / chunk_seconds))
     pieces: list[tuple[Path, float]] = []
     for i in range(n):
         start = i * chunk_seconds
-        piece = out_dir / f"chunk_{i:03d}.flac"
+        piece = out_dir / f"chunk_{i:03d}{_RECOMPRESS_SUFFIX}"
         _run_ffmpeg([
             "ffmpeg", "-y",
             "-ss", str(start), "-t", str(chunk_seconds),
-            "-i", str(src),
-            "-ar", "16000", "-ac", "1", "-map", "0:a",
-            "-c:a", "flac",
-            str(piece),
+            "-i", str(src), *_RECOMPRESS_ARGS, str(piece),
         ])
         pieces.append((piece, float(start)))
     return pieces
@@ -162,15 +169,36 @@ def _post_groq(audio_path: Path, model: str, language: str | None, key: str) -> 
     data = {"model": model, "response_format": "verbose_json"}
     if language:
         data["language"] = language
-    with open(audio_path, "rb") as f:
-        resp = requests.post(
-            GROQ_ENDPOINT,
-            headers={"Authorization": f"Bearer {key}"},
-            data=data,
-            files={"file": (audio_path.name, f)},
-            timeout=600,
+
+    for attempt in range(GROQ_RATE_LIMIT_RETRIES + 1):
+        with open(audio_path, "rb") as f:
+            resp = requests.post(
+                GROQ_ENDPOINT,
+                headers={"Authorization": f"Bearer {key}"},
+                data=data,
+                files={"file": (audio_path.name, f)},
+                timeout=600,
+            )
+        if resp.status_code != 429:
+            resp.raise_for_status()
+            return resp.json()
+
+        # Respect Retry-After if the server set it; otherwise exponential backoff.
+        retry_after_hdr = resp.headers.get("Retry-After")
+        try:
+            wait = float(retry_after_hdr) if retry_after_hdr else 2 ** attempt * 5
+        except ValueError:
+            wait = 2 ** attempt * 5
+        if wait > GROQ_RATE_LIMIT_MAX_WAIT or attempt == GROQ_RATE_LIMIT_RETRIES:
+            resp.raise_for_status()
+        print(
+            f"    rate-limited by Groq, waiting {wait:.0f}s "
+            f"(attempt {attempt + 1}/{GROQ_RATE_LIMIT_RETRIES})…",
+            file=sys.stderr,
         )
-    resp.raise_for_status()
+        time.sleep(wait)
+
+    resp.raise_for_status()  # unreachable, but keeps type checkers happy
     return resp.json()
 
 
