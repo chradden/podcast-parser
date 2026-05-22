@@ -36,12 +36,21 @@ class Episode:
         return d
 
 
-def title_to_filename(title: str, ext: str, max_len: int = 120) -> str:
-    name = title
+@dataclass
+class Feed:
+    title: str
+    episodes: list[Episode]
+
+
+def sanitize_for_filename(name: str, max_len: int = 120) -> str:
+    """Strip filesystem-hostile characters so a title is safe as a file/folder name."""
     for ch in INVALID_FILENAME_CHARS:
         name = name.replace(ch, "_")
-    name = name.strip().replace(" ", "_")[:max_len]
-    return f"{name}{ext}"
+    return name.strip().replace(" ", "_")[:max_len] or "untitled"
+
+
+def title_to_filename(title: str, ext: str, max_len: int = 120) -> str:
+    return f"{sanitize_for_filename(title, max_len)}{ext}"
 
 
 def _extract_audio_url(entry) -> str | None:
@@ -62,14 +71,15 @@ def _head_size(url: str, timeout: float = 10.0) -> int | None:
         return None
 
 
-def parse_feed(feed_url: str, fetch_sizes: bool = True) -> list[Episode]:
-    """Parse a podcast RSS feed and return a list of Episodes.
+def parse_feed(feed_url: str, fetch_sizes: bool = True) -> Feed:
+    """Parse a podcast RSS feed. Returns Feed(title, episodes).
 
     Set fetch_sizes=False to skip HEAD requests (faster, but size unknown).
     """
-    feed = feedparser.parse(feed_url)
+    parsed = feedparser.parse(feed_url)
+    channel_title = (getattr(parsed.feed, "title", None) or "podcast").strip()
     episodes: list[Episode] = []
-    for idx, entry in enumerate(feed.entries):
+    for idx, entry in enumerate(parsed.entries):
         audio_url = _extract_audio_url(entry)
         if not audio_url:
             continue
@@ -87,7 +97,7 @@ def parse_feed(feed_url: str, fetch_sizes: bool = True) -> list[Episode]:
                 published=getattr(entry, "published", None),
             )
         )
-    return episodes
+    return Feed(title=channel_title, episodes=episodes)
 
 
 def select_episodes(episodes: list[Episode], selector: str) -> list[Episode]:

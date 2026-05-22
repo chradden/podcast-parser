@@ -304,11 +304,24 @@ def transcribe(
     raise ValueError(f"Unknown engine: {engine!r} (use 'local' or 'groq')")
 
 
-def write_outputs(result: TranscriptionResult, audio_path: str | os.PathLike) -> tuple[Path, Path]:
-    """Write <stem>.txt and <stem>.json next to the audio file. Returns both paths."""
+def write_outputs(
+    result: TranscriptionResult,
+    audio_path: str | os.PathLike,
+    txt_path: str | os.PathLike | None = None,
+) -> tuple[Path, Path]:
+    """Write transcript text and segment JSON.
+
+    By default both files sit next to the audio file (<stem>.txt, <stem>.json).
+    Pass txt_path to redirect the .txt elsewhere (e.g. an Obsidian vault);
+    the JSON stays beside the audio.
+    """
     stem = Path(audio_path).with_suffix("")
-    txt_path = stem.with_suffix(".txt")
+    if txt_path is None:
+        txt_out = stem.with_suffix(".txt")
+    else:
+        txt_out = Path(txt_path)
+        txt_out.parent.mkdir(parents=True, exist_ok=True)
     json_path = stem.with_suffix(".json")
-    txt_path.write_text(result.text, encoding="utf-8")
+    txt_out.write_text(result.text, encoding="utf-8")
     json_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
-    return txt_path, json_path
+    return txt_out, json_path

@@ -42,6 +42,43 @@ indem es Dateien bis 99 MB ohne Recompress hochlädt:
 setx GROQ_MAX_UPLOAD_MB "99"
 ```
 
+### d) Transkripte in deinen Obsidian-Vault umleiten
+
+Wenn du willst, dass die `.txt`-Dateien automatisch in einem zentralen
+Wissensordner (z. B. deinem Obsidian-Vault) landen statt neben den MP3s,
+setz die Env-Var einmalig:
+
+```powershell
+setx PODCAST_PARSER_TXT_OUT "C:\Users\Christian\3_Wissensressourcen\Obsidian_Vault\podcast-parser"
+```
+
+PowerShell schließen + neu öffnen.
+
+Danach legt das Tool für jeden Podcast automatisch einen Unterordner an,
+der den Namen aus dem RSS-Feed übernimmt. Z. B.:
+
+```
+C:\Users\Christian\3_Wissensressourcen\Obsidian_Vault\podcast-parser\
+├── Money_Talks\
+│   ├── Folge_42_Geld_und_Inflation.txt
+│   └── Folge_43_Krypto_Update.txt
+└── Silicon_Valley_Girl\
+    ├── LinkedIn_founder_…_Reid_Hoffman.txt
+    └── AI_Instead_of_a_Degree_…_$1B_Company.txt
+```
+
+MP3 und JSON bleiben weiterhin im `--out`-Ordner (also dort, wo du
+Download und Roh-Segmente erwartest).
+
+Für einen einzelnen Lauf kannst du das Ziel auch ad-hoc setzen oder
+überschreiben:
+
+```powershell
+python podcast.py pipeline <FEED> --episode latest --lang en `
+    --out .\podcasts\svg `
+    --txt-out "C:\Users\Christian\3_Wissensressourcen\Obsidian_Vault\podcast-parser"
+```
+
 ---
 
 ## 2. Eine Folge zusammenfassen lassen (jedes Mal)
@@ -99,12 +136,19 @@ Transkript landet neben der Datei.
 
 ### Schritt 3: Ergebnisse einsammeln
 
-Für jede verarbeitete Folge bekommst du zwei Dateien:
+Für jede verarbeitete Folge bekommst du drei Dateien:
 
 ```
 podcasts\<ordner>\Foo_Bar_Episode_Title.mp3    ← Originalaudio (bleibt liegen)
-podcasts\<ordner>\Foo_Bar_Episode_Title.txt    ← Transkript (Volltext)
 podcasts\<ordner>\Foo_Bar_Episode_Title.json   ← Segmente mit Zeitstempeln
+podcasts\<ordner>\Foo_Bar_Episode_Title.txt    ← Transkript (Volltext)
+```
+
+**Wenn du `PODCAST_PARSER_TXT_OUT` gesetzt hast** (siehe Setup 1d), wandert
+die `.txt` stattdessen in deinen Vault:
+
+```
+<VAULT>\<Podcast_Name>\Foo_Bar_Episode_Title.txt
 ```
 
 Die **`.txt`** ist die, die du Claude in den Chat ziehst oder reinkopierst.
