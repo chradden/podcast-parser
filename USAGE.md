@@ -33,16 +33,7 @@ echo $env:GROQ_API_KEY
 
 Wenn dein Key erscheint: fertig. Wenn leer: PowerShell war noch nicht neu.
 
-### c) Bei Groq Developer-Tier: Limit hochschrauben
-
-Optional, nur wenn du upgegradet hast. Dann profitiert das Tool davon,
-indem es Dateien bis 99 MB ohne Recompress hochlädt:
-
-```powershell
-setx GROQ_MAX_UPLOAD_MB "99"
-```
-
-### d) Transkripte in deinen Obsidian-Vault umleiten
+### c) Transkripte in deinen Obsidian-Vault umleiten
 
 Wenn du willst, dass die `.txt`-Dateien automatisch in einem zentralen
 Wissensordner (z. B. deinem Obsidian-Vault) landen statt neben den MP3s,

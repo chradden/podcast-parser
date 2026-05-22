@@ -97,10 +97,11 @@ GROQ_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions"
 GROQ_DEFAULT_MODEL = "whisper-large-v3"
 
 # Groq's hard upload limit for whisper-large-v3 is 25 MB on the free tier
-# (100 MB on dev). Stay safely under the free-tier ceiling by default;
-# override via GROQ_MAX_UPLOAD_MB once you're on the dev tier.
-GROQ_MAX_UPLOAD_BYTES = int(float(os.environ.get("GROQ_MAX_UPLOAD_MB", "24")) * 1024 * 1024)
-GROQ_CHUNK_SECONDS = 600  # 10 min chunks when even Opus recompress isn't enough
+# (100 MB on dev). Sized to fit both: we always recompress to Opus 24 kbps
+# mono first (cheap, no model-side quality loss), so the chunk threshold
+# only matters for absurdly long sources like audiobooks.
+GROQ_MAX_UPLOAD_BYTES = 24 * 1024 * 1024
+GROQ_CHUNK_SECONDS = 1800  # 30 min Opus chunks if a single recompress is still too big
 GROQ_RATE_LIMIT_MAX_WAIT = 120  # seconds; longer Retry-After → give up
 GROQ_RATE_LIMIT_RETRIES = 3
 # Opus at 24 kbps mono 16 kHz: ~11 MB per hour of speech. Whisper resamples to
@@ -220,23 +221,28 @@ def _transcribe_groq(
     with tempfile.TemporaryDirectory(prefix="groq_audio_") as td:
         td_path = Path(td)
 
-        if size <= GROQ_MAX_UPLOAD_BYTES:
+        # Always recompress to Opus 24k mono before upload. Whisper resamples to
+        # 16 kHz mono internally so the quality ceiling is identical to the
+        # source, but the upload becomes ~11 MB per audio hour — well under
+        # Groq's 25 MB free-tier limit for normal podcast episodes, and faster
+        # to upload regardless of tier. If ffmpeg isn't available we fall back
+        # to sending the source file as-is.
+        if not _ffmpeg_available():
             uploads: list[tuple[Path, float]] = [(src, 0.0)]
         else:
-            if not _ffmpeg_available():
-                raise RuntimeError(
-                    f"Audio is {size / 1e6:.1f} MB, above Groq's {GROQ_MAX_UPLOAD_BYTES / 1e6:.0f} MB "
-                    f"upload limit. ffmpeg/ffprobe needed for recompress/split but not found in PATH."
-                )
-            print(f"  (audio {size / 1e6:.1f} MB > Groq limit, recompressing…)", file=sys.stderr)
-            recompressed = td_path / "recompressed.flac"
+            recompressed = td_path / ("recompressed" + _RECOMPRESS_SUFFIX)
             _recompress_for_groq(src, recompressed)
-            if recompressed.stat().st_size <= GROQ_MAX_UPLOAD_BYTES:
+            new_size = recompressed.stat().st_size
+            print(
+                f"  (recompressed {size / 1e6:.1f} MB → {new_size / 1e6:.1f} MB Opus)",
+                file=sys.stderr,
+            )
+            if new_size <= GROQ_MAX_UPLOAD_BYTES:
                 uploads = [(recompressed, 0.0)]
             else:
                 print(
-                    f"  (still {recompressed.stat().st_size / 1e6:.1f} MB after recompress, "
-                    f"splitting into {GROQ_CHUNK_SECONDS // 60}-min chunks…)",
+                    f"  (still {new_size / 1e6:.1f} MB, splitting into "
+                    f"{GROQ_CHUNK_SECONDS // 60}-min chunks…)",
                     file=sys.stderr,
                 )
                 uploads = _split_for_groq(recompressed, td_path, GROQ_CHUNK_SECONDS)
