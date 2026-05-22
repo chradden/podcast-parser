@@ -95,35 +95,43 @@ def cmd_pipeline(args: argparse.Namespace) -> int:
         return 2
 
     results = []
+    failures = 0
     for ep in selected:
         print(f"→ {ep.title}", file=sys.stderr)
-        audio = download_episode(ep, args.out, progress=not args.quiet)
-        result = run_transcribe(
-            audio,
-            engine=args.engine,
-            model=args.model,
-            language=None if args.lang == "auto" else args.lang,
-        )
-        txt_path, json_path = write_outputs(result, audio)
-        results.append({
-            "title": ep.title,
-            "audio": str(audio),
-            "transcript": str(txt_path),
-            "segments_json": str(json_path),
-            "language": result.language,
-            "duration": result.duration,
-            "engine": result.engine,
-            "model": result.model,
-        })
-        print(f"  → {txt_path}", file=sys.stderr)
+        try:
+            audio = download_episode(ep, args.out, progress=not args.quiet)
+            result = run_transcribe(
+                audio,
+                engine=args.engine,
+                model=args.model,
+                language=None if args.lang == "auto" else args.lang,
+            )
+            txt_path, json_path = write_outputs(result, audio)
+            results.append({
+                "title": ep.title,
+                "audio": str(audio),
+                "transcript": str(txt_path),
+                "segments_json": str(json_path),
+                "language": result.language,
+                "duration": result.duration,
+                "engine": result.engine,
+                "model": result.model,
+            })
+            print(f"  → {txt_path}", file=sys.stderr)
+        except Exception as e:
+            failures += 1
+            results.append({"title": ep.title, "error": str(e)})
+            print(f"  ✗ failed: {e}", file=sys.stderr)
+            continue
 
     if args.json:
         json.dump(results, sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
     else:
         for r in results:
-            print(r["transcript"])
-    return 0
+            if "transcript" in r:
+                print(r["transcript"])
+    return 0 if failures == 0 else 4
 
 
 def cmd_video(args: argparse.Namespace) -> int:
